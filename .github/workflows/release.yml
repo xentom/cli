@@ -1,0 +1,148 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build
+        run: bun build src/index.ts --compile --target bun-windows-x64 --outfile dist/xentom.exe
+
+      - name: Modify binary icon
+        run: .github/workflows/rh.exe -open dist/xentom.exe -save dist/xentom.exe -action addoverwrite -resource assets/logo.ico -mask ICONGROUP,IDI_MYICON,1033
+
+      - name: Create binary version info
+        run: |
+          $version = "$(& "dist/xentom.exe" --version)"
+          $content = @"
+          1 VERSIONINFO
+          FILEVERSION 1,$(($version -split "\.") -join ",")
+          PRODUCTVERSION 1,$(($version -split "\.") -join ",")
+          FILEOS 0x4
+          FILETYPE 0x1
+          {
+            BLOCK "StringFileInfo"
+            {
+              BLOCK "040904b0"
+              {
+                VALUE "FileDescription", "Xentom"
+                VALUE "FileVersion", "$version"
+                VALUE "InternalName", "xentom"
+                VALUE "OriginalFilename", "xentom.exe"
+                VALUE "ProductName", "Xentom"
+                VALUE "ProductVersion", "$version"
+              }
+            }
+
+            BLOCK "VarFileInfo"
+            {
+              VALUE "Translation", 0x0409 0x04B0
+            }
+          }
+          "@
+          Set-Content -Path 'dist/versioninfo.rc' -Value $content
+
+      - name: Compile version info
+        run: .github/workflows/rh.exe -open dist/versioninfo.rc -save dist/versioninfo.res -action compile
+
+      - name: Link version info
+        run: .github/workflows/rh.exe -open dist/xentom.exe -save dist/xentom.exe -action addoverwrite -resource dist/versioninfo.res -mask VERSIONINFO,1,1033
+
+      - name: Create zip archive
+        run: Compress-Archive -Path dist/xentom.exe -DestinationPath dist/xentom-windows-x64.zip
+
+      - name: Release Canary
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/heads/main')
+        with:
+          name: Canary
+          tag_name: canary
+          prerelease: true
+          body: This release of the Xentom CLI is based on commit [`${{ github.sha }}`](https://github.com/xentom/cli/commit/${{ github.sha }}), incorporating the latest updates and improvements.
+          files: dist/xentom-windows-x64.zip
+
+      - name: Extract version from executable
+        if: startsWith(github.ref, 'refs/tags/')
+        run: echo "BINARY_VERSION=$(& "dist/xentom.exe" --version)" >> $env:GITHUB_ENV
+
+      - name: Validate version against tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          $tag = $env:GITHUB_REF.Replace("refs/tags/v", "")
+          if ($env:BINARY_VERSION -ne $tag) {
+            Write-Error "Version mismatch: expected $tag, got $env:BINARY_VERSION"
+            exit 1
+          }
+
+      - name: Release Tag
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: Xentom CLI v${{ env.BINARY_VERSION }}
+          files: dist/xentom-windows-x64.zip
+
+  build-macos-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build
+        run: |
+          for target in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
+            bun build src/index.ts --compile --target bun-$target --outfile dist/xentom-$target/xentom
+            zip -jr dist/xentom-$target.zip dist/xentom-$target
+          done
+
+      - name: Release Canary
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/heads/main')
+        with:
+          name: Canary
+          tag_name: canary
+          prerelease: true
+          body: This release of the Xentom CLI is based on commit [`${{ github.sha }}`](https://github.com/xentom/cli/commit/${{ github.sha }}), incorporating the latest updates and improvements.
+          files: dist/xentom-*.zip
+
+      - name: Extract version from executable
+        if: startsWith(github.ref, 'refs/tags/')
+        run: echo "BINARY_VERSION=$(dist/xentom-linux-x64/xentom --version)" >> $GITHUB_ENV
+
+      - name: Validate version against tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag=${GITHUB_REF/refs\/tags\/v/}
+          if [[ $BINARY_VERSION != $tag ]]; then
+            echo "Version mismatch: expected $tag, got $BINARY_VERSION"
+            exit 1
+          fi
+
+      - name: Release Tag
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: Xentom CLI v${{ env.BINARY_VERSION }}
+          files: dist/xentom-*.zip

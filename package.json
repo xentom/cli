@@ -1,0 +1,44 @@
+{
+  "name": "@xentom/cli",
+  "version": "0.0.12",
+  "type": "module",
+  "scripts": {
+    "format": "prettier --check .",
+    "format:fix": "bun format --continue -- --write --cache --cache-location .cache/.prettiercache",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false",
+    "lint": "eslint",
+    "dev": "bun ./src/index.ts",
+    "build": "NODE_ENV=production bun build --outfile ~/.xentom/bin/xentom --compile ./src/index.ts"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^5.3.8",
+    "@t3-oss/env-core": "^0.11.0",
+    "@trpc/client": "next",
+    "@trpc/server": "next",
+    "@xentom/integration": "^0.0.17",
+    "commander": "^12.1.0",
+    "detect-package-manager": "^3.0.2",
+    "glob": "^11.0.0",
+    "indent-string": "^5.0.0",
+    "jszip": "^3.10.1",
+    "mime": "^4.0.4",
+    "mustache": "^4.2.0",
+    "ora": "^8.0.1",
+    "slugify": "^1.6.6",
+    "superjson": "^2.2.1",
+    "yoctocolors": "^2.1.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/mime": "^4.0.0",
+    "@types/mustache": "^4.2.5",
+    "@xentom/eslint-config": "^0.0.0",
+    "@xentom/prettier-config": "^0.0.2",
+    "@xentom/tsconfig": "^0.0.0",
+    "eslint": "^9.9.1",
+    "prettier": "^3.3.3",
+    "typescript": "^5.0.0"
+  },
+  "prettier": "@xentom/prettier-config"
+}

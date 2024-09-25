@@ -1,0 +1,14 @@
+{
+  "extends": "@xentom/tsconfig/bun.tsconfig.json",
+  "compilerOptions": {
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "src/commands/init/templates/typescript/**/*"]
+}
