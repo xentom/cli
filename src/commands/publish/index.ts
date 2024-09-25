@@ -1,10 +1,10 @@
 import { createCommand } from '@/commands/utils';
 import { env } from '@/env';
 import { createRequestHeaders } from '@/lib/trpc';
+import { createZipInMemory } from '@/lib/zip';
 import { ActionError, actionErrorHandler } from '@/utils/action';
 import { cmd } from '@/utils/output';
 import { getPackageJson } from '@/utils/pm';
-import JSZip from 'jszip';
 import ora from 'ora';
 import { cyan } from 'yoctocolors';
 import { type IntegrationPackageJson } from '@xentom/integration';
@@ -29,7 +29,7 @@ export async function publish(options: PublishOptions) {
 
   for (const key of ['name', 'version', 'organization'] as const) {
     if (!pkg[key]) {
-      spinner.fail('Publish failed');
+      spinner.clear();
       throw new ActionError(
         `The ${cmd('package.json')} file is missing the required ${cmd(key)} field. Please add this field before publishing.`,
       );
@@ -37,7 +37,7 @@ export async function publish(options: PublishOptions) {
   }
 
   if (pkg.logo?.endsWith('.svg')) {
-    spinner.fail('Publish failed');
+    spinner.clear();
     throw new ActionError(
       `SVG logos are not allowed due to security reasons. Please use a different format for the ${cmd('logo')} in ${cmd('package.json')}.`,
     );
@@ -49,7 +49,7 @@ export async function publish(options: PublishOptions) {
   ]);
 
   if (!hasBrowserFile || !hasServerFile) {
-    spinner.fail('Publish failed');
+    spinner.clear();
     throw new ActionError(
       `The integration could not be published because it has not been built yet. Please run the ${cmd('xentom build')} command to build the integration before publishing.`,
     );
@@ -67,7 +67,7 @@ export async function publish(options: PublishOptions) {
       pkg = await setVersion(pkg, previousVersion);
     }
 
-    spinner.fail('Publish failed');
+    spinner.clear();
     throw error;
   }
 
@@ -90,7 +90,7 @@ async function setVersion(pkg: IntegrationPackageJson, version: string) {
 }
 
 async function pack(pkg: IntegrationPackageJson) {
-  const include = [
+  const files = [
     './package.json',
     './CHANGELOG.md',
     './LICENSE.txt',
@@ -101,34 +101,23 @@ async function pack(pkg: IntegrationPackageJson) {
     './dist/definition.json',
     './dist/server.js',
     './dist/index.d.ts',
-    pkg.logo,
   ];
 
-  const zip = new JSZip();
-  await Promise.allSettled(
-    include.map(async (path) => {
-      if (!path) return;
-      zip.file(path, await Bun.file(path).arrayBuffer());
-    }),
-  );
+  if (pkg.logo) {
+    files.push(pkg.logo);
+  }
 
-  return await zip.generateAsync({
-    type: 'arraybuffer',
-    compression: 'DEFLATE',
-    compressionOptions: {
-      level: 5,
-    },
-  });
+  return await createZipInMemory(files);
 }
 
-async function upload(pack: ArrayBuffer, tag: string) {
+async function upload(body: Buffer, tag: string) {
   const res = await fetch(
     new Request(
       `${env.XENTOM_ADDRESS}/api/v1/integrations/publish?tag=${tag}`,
       {
         method: 'PUT',
         headers: await createRequestHeaders(),
-        body: pack,
+        body,
       },
     ),
   );
