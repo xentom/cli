@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { name, version } from '../package.json';
+import { name } from '../package.json';
 import { commands } from './commands';
 import { createCommand } from './commands/utils';
 import { catchError } from './utils/action';
