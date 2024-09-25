@@ -6,8 +6,9 @@ import { ActionError, actionErrorHandler } from '@/utils/action';
 import { cmd } from '@/utils/output';
 import { getPackageJson } from '@/utils/pm';
 import ora from 'ora';
-import { cyan } from 'yoctocolors';
-import { type IntegrationPackageJson } from '@xentom/integration';
+import { cyan, red } from 'yoctocolors';
+import { ZodError } from 'zod';
+import { IntegrationPackageJson } from '@xentom/integration/schema';
 
 export function createPublishCommand() {
   return createCommand()
@@ -25,15 +26,32 @@ export interface PublishOptions {
 
 export async function publish(options: PublishOptions) {
   const spinner = ora('Publishing integration...').start();
-  let pkg = await getPackageJson();
 
-  for (const key of ['name', 'version', 'organization'] as const) {
-    if (!pkg[key]) {
-      spinner.clear();
-      throw new ActionError(
-        `The ${cmd('package.json')} file is missing the required ${cmd(key)} field. Please add this field before publishing.`,
-      );
+  let rawPkg;
+  try {
+    rawPkg = await getPackageJson();
+  } catch (error) {
+    spinner.clear();
+    throw new ActionError(
+      `The ${cmd('package.json')} file is missing or invalid. Please make sure the file exists and is valid JSON.`,
+    );
+  }
+
+  let pkg;
+  try {
+    pkg = IntegrationPackageJson.parse(rawPkg);
+  } catch (error) {
+    spinner.clear();
+
+    if (!(error instanceof ZodError)) {
+      throw new ActionError(`The ${cmd('package.json')} file is invalid.`);
     }
+
+    throw new ActionError(
+      `The ${cmd('package.json')} file is invalid. Please fix the following fields:\n${error.errors
+        .map((e) => `  - ${red(e.path[0].toString())} (${e.message})`)
+        .join('\n')}`,
+    );
   }
 
   if (pkg.logo?.endsWith('.svg')) {

@@ -15,7 +15,7 @@
     "@t3-oss/env-core": "^0.11.0",
     "@trpc/client": "next",
     "@trpc/server": "next",
-    "@xentom/integration": "^0.0.17",
+    "@xentom/integration": "^0.0.19",
     "archiver": "^7.0.1",
     "commander": "^12.1.0",
     "detect-package-manager": "^3.0.2",
