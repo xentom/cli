@@ -134,7 +134,7 @@ async function unzip(zipPath: string, destPath: string) {
         break;
       }
       case 'win32': {
-        await Bun.$`powershell -Command "$$global:ProgressPreference = 'SilentlyContinue'; Expand-Archive -Path '${zipPath}' -DestinationPath '${destPath}' -Force"`;
+        await Bun.$`powershell -Command "$$global:ErrorActionPreference = 'Stop'; $$global:ProgressPreference = 'SilentlyContinue'; Expand-Archive -Path '${zipPath}' -DestinationPath '${destPath}' -Force"`;
         break;
       }
     }
