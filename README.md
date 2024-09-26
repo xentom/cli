@@ -17,8 +17,8 @@ curl -fsSL https://xentom.com/install | bash
 
 ### Windows
 
-```bash
-powershell -c "irm xentom.com/install.ps1 | iex"
+```ps1
+irm xentom.com/install.ps1 | iex
 ```
 
 ## Upgrade
