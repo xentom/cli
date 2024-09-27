@@ -27,9 +27,9 @@ export interface PublishOptions {
 export async function publish(options: PublishOptions) {
   const spinner = ora('Publishing integration...').start();
 
-  let rawPkg;
+  let pkg;
   try {
-    rawPkg = await getPackageJson();
+    pkg = await getPackageJson();
   } catch (error) {
     spinner.clear();
     throw new ActionError(
@@ -37,9 +37,8 @@ export async function publish(options: PublishOptions) {
     );
   }
 
-  let pkg;
   try {
-    pkg = IntegrationPackageJson.parse(rawPkg);
+    IntegrationPackageJson.parse(pkg);
   } catch (error) {
     spinner.clear();
 
