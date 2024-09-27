@@ -7,7 +7,15 @@ FROM oven/bun:1 AS builder
   RUN bun install
 
   COPY . .
+
   ENV NODE_ENV=production
+
+  ARG GITHUB_SHA
+  ENV GITHUB_SHA=$GITHUB_SHA
+  
+  ARG GITHUB_REF_TYPE
+  ENV GITHUB_REF_TYPE=$GITHUB_REF_TYPE
+
   RUN bun build --outfile ./dist/xentom --compile ./src/index.ts
 
 FROM debian:stable-slim AS runner

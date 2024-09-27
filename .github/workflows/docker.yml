@@ -8,8 +8,7 @@ on:
       - v*
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/cli
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/cli
 
 jobs:
   build-and-push-image:
@@ -34,7 +33,7 @@ jobs:
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -42,7 +41,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=canary,enable={{is_default_branch}}
             type=match,pattern=v(.*),group=1
@@ -55,3 +54,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            GITHUB_SHA=${{ github.sha }}
+            GITHUB_REF_TYPE=${{ github.ref_type }}
