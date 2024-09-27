@@ -23,12 +23,16 @@ export interface BuildOptions {
 export async function build(options: BuildOptions) {
   const spinner = ora('Building integration...').start();
 
+  const logs: string[] = [];
   try {
     await Promise.all([
       createIntegrationBuilder({
         ...options,
-        onBuildLog(log) {
-          const message = log.toString().replaceAll('\n', ' ').trim();
+        onBuildLog(data) {
+          const log = data.toString();
+          logs.push(log);
+
+          const message = log.replaceAll('\n', ' ').trim();
           if (message) {
             spinner.text = `Building integration... ${gray(`(${message})`)}`;
           }
@@ -41,7 +45,8 @@ export async function build(options: BuildOptions) {
       buildIntegrationDefinition(),
     ]);
   } catch (error) {
-    spinner.fail('Build failed');
+    spinner.clear();
+    console.error(logs.join(''));
     throw new ActionError(
       error instanceof Error ? error.message : String(error),
     );
@@ -84,7 +89,7 @@ export async function createIntegrationBuilder(
   // https://github.com/nodejs/node/issues/32106
   const isIpcRequired = !!options?.onBuildSuccess || !!options?.onBuildError;
   const args = [options?.watch && '--watch'].filter(Boolean) as string[];
-  const builder = spawn('node', [builderPath, ...args], {
+  const builder = spawn('node', ['--no-warnings', builderPath, ...args], {
     stdio: ['pipe', 'pipe', 'pipe', isIpcRequired ? 'ipc' : undefined],
     cwd: process.cwd(),
   });
