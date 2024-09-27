@@ -33,9 +33,7 @@ export async function upgrade(options: UpgradeOptions) {
   let tag;
   if (options.canary) {
     const release = await getReleaseDetails('canary');
-    if (!release) {
-      throw DownloadFailedError;
-    }
+    if (!release) throw DownloadFailedError;
 
     const sha = getCommitSha();
     if (sha && release.body.includes(sha)) {
@@ -44,16 +42,14 @@ export async function upgrade(options: UpgradeOptions) {
       );
     } else {
       console.log(
-        `New canary version of the Xentom CLI is out! You're on ${bold(blue(getRevision()))}`,
+        `A new canary version of the Xentom CLI is available! You are currently on ${bold(blue(getRevision()))}\nUpgrading to the latest canary version. This may take a few moments...`,
       );
     }
 
     tag = 'canary';
   } else {
     const release = await getReleaseDetails('latest');
-    if (!release) {
-      throw DownloadFailedError;
-    }
+    if (!release) throw DownloadFailedError;
 
     const number = release.tag_name.replace('v', '');
     if (number === version) {
@@ -62,21 +58,19 @@ export async function upgrade(options: UpgradeOptions) {
       );
     } else {
       console.log(
-        `Xentom CLI ${bold(cyan(`v${number}`))} is out! You're on ${bold(blue(`v${version}`))}`,
+        `A new version of the Xentom CLI is available! You are currently on ${bold(blue(`v${version}`))}\nUpgrading to the latest version ${bold(cyan(`v${number}`))}. This may take a few moments...`,
       );
     }
 
     tag = release.tag_name;
   }
 
-  console.log(`Upgrading to the latest version...`);
-
   const zipPath = await download(tag);
   await unzip(zipPath, path.dirname(xentomBinPath));
   await unlink(zipPath);
 
   console.log(
-    `${green('Congratulations!')} The Xentom CLI has been successfully upgraded to the latest version ${gray(`(which is ${tag})`)}`,
+    `${green('Congratulations!')} The Xentom CLI has been successfully upgraded to the ${options.canary ? 'latest canary' : 'latest'} version`,
   );
 }
 
@@ -86,6 +80,7 @@ async function getReleaseDetails(tag: 'latest' | 'canary') {
       ? 'https://api.github.com/repos/xentom/cli/releases/tags/canary'
       : 'https://api.github.com/repos/xentom/cli/releases/latest',
   );
+
   if (!response.ok) {
     return;
   }
