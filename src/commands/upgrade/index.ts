@@ -112,7 +112,7 @@ async function download(tag: string) {
     );
 
     const zipPath = path.join(os.tmpdir(), 'xentom.zip');
-    await Bun.write(zipPath, response);
+    await Bun.write(zipPath, await response.arrayBuffer());
 
     return zipPath;
   } catch {
@@ -129,11 +129,16 @@ async function unzip(zipPath: string, destPath: string) {
         break;
       }
       case 'win32': {
-        await Bun.$`powershell -Command "$$global:ErrorActionPreference = 'Stop'; $$global:ProgressPreference = 'SilentlyContinue'; Expand-Archive -Path '${zipPath}' -DestinationPath '${destPath}' -Force"`;
+        await Bun.$`powershell -Command "
+          $$global:ErrorActionPreference = 'Stop';
+          $$global:ProgressPreference = 'SilentlyContinue';
+          Move-Item -Path '${destPath}\\xentom.exe' -Destination '${destPath}\\xentom.old' -Force;
+          Expand-Archive -Path '${zipPath}' -DestinationPath '${destPath}' -Force;
+        "`;
         break;
       }
     }
-  } catch {
+  } catch (err) {
     throw ExtractionFailureError;
   }
 }
