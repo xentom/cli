@@ -21,6 +21,12 @@ curl -fsSL https://xentom.com/install | bash
 irm xentom.com/install.ps1 | iex
 ```
 
+### Docker
+
+```bash
+docker run -it --rm ghcr.io/xentom/cli:latest --help
+```
+
 ## Upgrade
 
 To upgrade to the latest version of the Xentom CLI, run:
