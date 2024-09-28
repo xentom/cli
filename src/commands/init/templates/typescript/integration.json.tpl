@@ -3,6 +3,5 @@
   "name": "{{ name }}",
   "version": "0.0.1",
   "organization": "{{ organization }}",
-  "source": "./src/index.ts",
   "logo": "./assets/logo.png"
 }
