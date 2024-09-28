@@ -1,10 +1,10 @@
 {
   "name": "@xentom/cli",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "type": "module",
   "scripts": {
     "format": "prettier --check .",
-    "format:fix": "bun format --continue -- --write --cache --cache-location .cache/.prettiercache",
+    "format:fix": "bun format --write --cache --cache-location .cache/.prettiercache",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false",
     "lint": "eslint",
     "dev": "bun ./src/index.ts",
@@ -15,7 +15,7 @@
     "@t3-oss/env-core": "^0.11.0",
     "@trpc/client": "next",
     "@trpc/server": "next",
-    "@xentom/integration": "^0.0.19",
+    "@xentom/integration": "^0.0.21",
     "archiver": "^7.0.1",
     "commander": "^12.1.0",
     "detect-package-manager": "^3.0.2",

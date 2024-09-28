@@ -1,10 +1,10 @@
 import { createCommand } from '@/commands/utils';
 import { ActionError, actionErrorHandler } from '@/utils/action';
-import { getPackageJson } from '@/utils/pm';
+import { getIntegrationMetadata } from '@/utils/metadata';
 import { type WebSocketHandler } from 'bun';
 import mime from 'mime/lite';
 import { cyan } from 'yoctocolors';
-import { type IntegrationPackageJson } from '@xentom/integration';
+import { type IntegrationMetadata } from '@xentom/integration/schema';
 import { createIntegrationBuilder } from '../build';
 import { getPlaygroundFiles } from './embed' with { type: 'macro' };
 
@@ -48,11 +48,11 @@ export async function dev(options: DevOptions) {
       throw new ActionError('Integration builder failed');
     });
 
-  const pkg = await getPackageJson();
-  const router = createPlaygroundRouter(pkg);
+  const metadata = await getIntegrationMetadata();
+  const router = createPlaygroundRouter(metadata);
   const server = Bun.serve({
     port: options.port,
-    websocket: createWebSocketHandler(pkg.name, listeners),
+    websocket: createWebSocketHandler(metadata.name, listeners),
     async fetch(req, server) {
       if (server.upgrade(req)) return;
       return router.handle(req);
@@ -64,7 +64,7 @@ export async function dev(options: DevOptions) {
   );
 }
 
-function createPlaygroundRouter(pkg: IntegrationPackageJson) {
+function createPlaygroundRouter(metadata: IntegrationMetadata) {
   const files = Object.fromEntries(getPlaygroundFiles());
   return {
     async handle(req: Request) {
@@ -79,14 +79,14 @@ function createPlaygroundRouter(pkg: IntegrationPackageJson) {
         }
 
         case '/integration/logo': {
-          if (!pkg.logo) {
+          if (!metadata.logo) {
             return new Response(null, { status: 404 });
           }
 
-          return new Response(await Bun.file(pkg.logo).arrayBuffer(), {
+          return new Response(await Bun.file(metadata.logo).arrayBuffer(), {
             headers: {
               'Content-Type':
-                mime.getType(pkg.logo) ?? 'application/octet-stream',
+                mime.getType(metadata.logo) ?? 'application/octet-stream',
               'Access-Control-Allow-Origin': '*',
             },
           });

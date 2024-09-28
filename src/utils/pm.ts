@@ -1,5 +1,4 @@
 import { detect, type PM } from 'detect-package-manager';
-import { type IntegrationPackageJson } from '@xentom/integration';
 
 export async function getPackageManager() {
   return await detect({
@@ -21,8 +20,4 @@ export function getPackageManagerInstallCommand(pm: PM) {
     default:
       return 'npm install';
   }
-}
-
-export async function getPackageJson(path = './package.json') {
-  return (await Bun.file(path).json()) as IntegrationPackageJson;
 }

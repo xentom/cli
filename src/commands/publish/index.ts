@@ -3,12 +3,12 @@ import { env } from '@/env';
 import { createRequestHeaders } from '@/lib/trpc';
 import { createZipInMemory } from '@/lib/zip';
 import { ActionError, actionErrorHandler } from '@/utils/action';
+import { getIntegrationMetadata } from '@/utils/metadata';
 import { cmd } from '@/utils/output';
-import { getPackageJson } from '@/utils/pm';
 import ora from 'ora';
 import { cyan, red } from 'yoctocolors';
 import { ZodError } from 'zod';
-import { IntegrationPackageJson } from '@xentom/integration/schema';
+import { IntegrationMetadata } from '@xentom/integration/schema';
 
 export function createPublishCommand() {
   return createCommand()
@@ -33,36 +33,36 @@ export interface PublishOptions {
 export async function publish(options: PublishOptions) {
   const spinner = ora('Publishing integration...').start();
 
-  let pkg;
+  let metadata;
   try {
-    pkg = await getPackageJson();
+    metadata = await getIntegrationMetadata();
   } catch (error) {
     spinner.clear();
     throw new ActionError(
-      `The ${cmd('package.json')} file is missing or invalid. Please make sure the file exists and is valid JSON.`,
+      `The ${cmd('integration.json')} file is missing or invalid. Please make sure the file exists and is valid JSON.`,
     );
   }
 
   try {
-    IntegrationPackageJson.parse(pkg);
+    IntegrationMetadata.parse(metadata);
   } catch (error) {
     spinner.clear();
 
     if (!(error instanceof ZodError)) {
-      throw new ActionError(`The ${cmd('package.json')} file is invalid.`);
+      throw new ActionError(`The ${cmd('integration.json')} file is invalid.`);
     }
 
     throw new ActionError(
-      `The ${cmd('package.json')} file is invalid. Please fix the following fields:\n${error.errors
+      `The ${cmd('integration.json')} file is invalid. Please fix the following fields:\n${error.errors
         .map((e) => `  - ${red(e.path[0].toString())} (${e.message})`)
         .join('\n')}`,
     );
   }
 
-  if (pkg.logo?.endsWith('.svg')) {
+  if (metadata.logo?.endsWith('.svg')) {
     spinner.clear();
     throw new ActionError(
-      `SVG logos are not allowed due to security reasons. Please use a different format for the ${cmd('logo')} in ${cmd('package.json')}.`,
+      `SVG logos are not allowed due to security reasons. Please use a different format for the ${cmd('logo')} in ${cmd('integration.json')}.`,
     );
   }
 
@@ -78,17 +78,17 @@ export async function publish(options: PublishOptions) {
     );
   }
 
-  const previousVersion = pkg.version;
+  const previousVersion = metadata.version;
   if (options.increment) {
-    pkg = await incrementVersion(pkg);
+    metadata = await incrementVersion(metadata);
   }
 
   try {
-    await upload(await pack(pkg), options.tag);
+    await upload(await pack(metadata), options.tag);
   } catch (error) {
     // Revert the version back to the previous one if the upload fails
     if (options.increment) {
-      pkg = await setVersion(pkg, previousVersion);
+      metadata = await setVersion(metadata, previousVersion);
     }
 
     if (options.ignoreDuplicates) {
@@ -100,7 +100,7 @@ export async function publish(options: PublishOptions) {
       ) {
         spinner.succeed(
           `The integration version ${cyan(
-            `${pkg.name}@${pkg.version}`,
+            `${metadata.name}@${metadata.version}`,
           )} has already been published under the ${cyan(options.tag)} tag.`,
         );
 
@@ -113,26 +113,26 @@ export async function publish(options: PublishOptions) {
   }
 
   spinner.succeed(
-    `Integration ${cyan(`${pkg.name}@${pkg.version}`)} has been successfully published under the ${cyan(options.tag)} tag.`,
+    `Integration ${cyan(`${metadata.name}@${metadata.version}`)} has been successfully published under the ${cyan(options.tag)} tag.`,
   );
 }
 
-async function incrementVersion(pkg: IntegrationPackageJson) {
-  const version = pkg.version.split('.');
+async function incrementVersion(metadata: IntegrationMetadata) {
+  const version = metadata.version.split('.');
   version[version.length - 1] = String(Number(version[version.length - 1]) + 1);
-  return await setVersion(pkg, version.join('.'));
+  return await setVersion(metadata, version.join('.'));
 }
 
-async function setVersion(pkg: IntegrationPackageJson, version: string) {
-  const copy = { ...pkg };
+async function setVersion(metadata: IntegrationMetadata, version: string) {
+  const copy = { ...metadata };
   copy.version = version;
-  await Bun.write('./package.json', JSON.stringify(copy, null, 2));
+  await Bun.write('./integration.json', JSON.stringify(copy, null, 2));
   return copy;
 }
 
-async function pack(pkg: IntegrationPackageJson) {
+async function pack(metadata: IntegrationMetadata) {
   const files = [
-    './package.json',
+    './integration.json',
     './CHANGELOG.md',
     './LICENSE.txt',
     './README.md',
@@ -144,8 +144,8 @@ async function pack(pkg: IntegrationPackageJson) {
     './dist/index.d.ts',
   ];
 
-  if (pkg.logo) {
-    files.push(pkg.logo);
+  if (metadata.logo) {
+    files.push(metadata.logo);
   }
 
   return await createZipInMemory(files);
