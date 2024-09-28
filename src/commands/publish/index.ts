@@ -16,12 +16,18 @@ export function createPublishCommand() {
     .description('Publish the integration')
     .option('-i, --increment', 'Increment the version number', false)
     .option('-t, --tag <tag>', 'Publish with a specific tag', 'latest')
+    .option(
+      '--ignore-duplicates',
+      'Skip checking and reporting duplication errors',
+      false,
+    )
     .action(actionErrorHandler(publish));
 }
 
 export interface PublishOptions {
   increment: boolean;
   tag: string;
+  ignoreDuplicates: boolean;
 }
 
 export async function publish(options: PublishOptions) {
@@ -80,8 +86,26 @@ export async function publish(options: PublishOptions) {
   try {
     await upload(await pack(pkg), options.tag);
   } catch (error) {
+    // Revert the version back to the previous one if the upload fails
     if (options.increment) {
       pkg = await setVersion(pkg, previousVersion);
+    }
+
+    if (options.ignoreDuplicates) {
+      if (
+        error instanceof ActionError &&
+        error.message.includes(
+          'You cannot publish over the previously published versions',
+        )
+      ) {
+        spinner.succeed(
+          `The integration version ${cyan(
+            `${pkg.name}@${pkg.version}`,
+          )} has already been published under the ${cyan(options.tag)} tag.`,
+        );
+
+        process.exit(0);
+      }
     }
 
     spinner.clear();
