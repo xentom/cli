@@ -21,3 +21,9 @@ export function getPackageManagerInstallCommand(pm: PM) {
       return 'npm install';
   }
 }
+
+export async function getPackageJson(path = './package.json') {
+  return (await Bun.file(path).json()) as {
+    version: string;
+  };
+}
