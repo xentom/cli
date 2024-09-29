@@ -1,7 +1,7 @@
 import { createCommand } from '@/commands/utils';
 import { env } from '@/env';
 import { createRequestHeaders } from '@/lib/trpc';
-import { createZipInMemory } from '@/lib/zip';
+import { createZipInMemory, type File } from '@/lib/zip';
 import { ActionError, actionErrorHandler } from '@/utils/action';
 import { getIntegrationMetadata } from '@/utils/metadata';
 import { cmd } from '@/utils/output';
@@ -9,6 +9,7 @@ import ora from 'ora';
 import { cyan, red } from 'yoctocolors';
 import { ZodError } from 'zod';
 import { IntegrationMetadata } from '@xentom/integration/schema';
+import { getNextVersion, setVersion } from './version';
 
 export function createPublishCommand() {
   return createCommand()
@@ -78,19 +79,17 @@ export async function publish(options: PublishOptions) {
     );
   }
 
-  const previousVersion = metadata.version;
   if (options.increment) {
-    metadata = await incrementVersion(metadata);
+    metadata.version = await getNextVersion(metadata.version);
   }
 
   try {
     await upload(await pack(metadata), options.tag);
-  } catch (error) {
-    // Revert the version back to the previous one if the upload fails
-    if (options.increment) {
-      metadata = await setVersion(metadata, previousVersion);
-    }
 
+    if (options.increment) {
+      await setVersion(metadata.version);
+    }
+  } catch (error) {
     if (options.ignoreDuplicates) {
       if (
         error instanceof ActionError &&
@@ -117,35 +116,22 @@ export async function publish(options: PublishOptions) {
   );
 }
 
-async function incrementVersion(metadata: IntegrationMetadata) {
-  const version = metadata.version.split('.');
-  version[version.length - 1] = String(Number(version[version.length - 1]) + 1);
-  return await setVersion(metadata, version.join('.'));
-}
-
-async function setVersion(metadata: IntegrationMetadata, version: string) {
-  const copy = { ...metadata };
-  copy.version = version;
-  await Bun.write('./integration.json', JSON.stringify(copy, null, 2));
-  return copy;
-}
-
 async function pack(metadata: IntegrationMetadata) {
-  const files = [
-    './integration.json',
-    './CHANGELOG.md',
-    './LICENSE.txt',
-    './README.md',
-    './dist/browser.js',
-    './dist/browser.css',
-    './dist/declarations.json',
-    './dist/definition.json',
-    './dist/server.js',
-    './dist/index.d.ts',
+  const files: File[] = [
+    { path: './integration.json', content: JSON.stringify(metadata, null, 2) },
+    { path: './CHANGELOG.md' },
+    { path: './LICENSE.txt' },
+    { path: './README.md' },
+    { path: './dist/browser.js' },
+    { path: './dist/browser.css' },
+    { path: './dist/declarations.json' },
+    { path: './dist/definition.json' },
+    { path: './dist/server.js' },
+    { path: './dist/index.d.ts' },
   ];
 
   if (metadata.logo) {
-    files.push(metadata.logo);
+    files.push({ path: metadata.logo });
   }
 
   return await createZipInMemory(files);

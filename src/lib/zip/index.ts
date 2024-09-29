@@ -3,7 +3,12 @@ import * as path from 'node:path';
 import { PassThrough } from 'node:stream';
 import archiver from 'archiver';
 
-export function createZipInMemory(files: string[]): Promise<Buffer> {
+export interface File {
+  path: string;
+  content?: string;
+}
+
+export function createZipInMemory(files: File[]): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const archive = archiver('zip', {
       zlib: { level: 9 },
@@ -19,10 +24,10 @@ export function createZipInMemory(files: string[]): Promise<Buffer> {
     archive.pipe(passthrough);
 
     files.forEach((file) => {
-      const prefix = path.normalize(path.dirname(file));
+      const prefix = path.normalize(path.dirname(file.path));
       try {
-        archive.append(fs.createReadStream(file), {
-          name: path.basename(file),
+        archive.append(file.content ?? fs.createReadStream(file.path), {
+          name: path.basename(file.path),
           prefix: prefix === '.' ? undefined : prefix,
         });
       } catch {}
