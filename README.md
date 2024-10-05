@@ -5,7 +5,8 @@
 
 A command-line interface (CLI) for executing workflows and managing workflow integrations. This tool is designed to help you streamline workflow execution, create workflow integrations efficiently, and use utility functions that simplify the development process for integrations.
 
-![Xentom CLI Screenshot](https://github.com/user-attachments/assets/9a272339-ce49-40cb-bbb6-d1c8670a7ac5)
+![Xentom CLI Screenshot](https://github.com/user-attachments/assets/b7c68f9f-b87f-45e6-ad84-043f9aa611b5)
+
 
 ## Installation
 
