@@ -2,8 +2,6 @@ import { createCommand } from '@/commands/utils';
 import { api, type WorkflowVersionDependency } from '@/lib/trpc';
 import { ActionError, actionErrorHandler } from '@/utils/action';
 import { cyan } from 'yoctocolors';
-// @ts-expect-error -- -
-import banner from './banner.js' with { type: 'text' };
 import {
   bundelWorkflowDependencies,
   fetchWorkflowDependencies,
@@ -99,19 +97,18 @@ interface RunOptions {
 }
 
 function run(options: RunOptions) {
-  const setExternalUrl = options.externalUrl
-    ? `process.env.XENTOM_EXTERNAL_URL = ${JSON.stringify(options.externalUrl)};`
-    : '';
-
   const scriptUrl = URL.createObjectURL(
     new Blob(
       [
         [
           '// @node',
-          setExternalUrl,
-          banner,
-          bundelWorkflowDependencies(options.dependencies),
-          options.workflowCode,
+          options.externalUrl
+            ? `process.env.XENTOM_EXTERNAL_URL = ${JSON.stringify(options.externalUrl)};`
+            : '',
+          options.workflowCode.replace(
+            '/*<XENTOM_WORKFLOW_DEPENDENCIES>*/',
+            bundelWorkflowDependencies(options.dependencies),
+          ),
         ].join('\n'),
       ],
       {
@@ -126,6 +123,10 @@ function run(options: RunOptions) {
 
   worker.addEventListener('message', () => {
     // TODO: Handle worker messages
+  });
+
+  worker.addEventListener('error', (error) => {
+    console.error(error.message);
   });
 
   process.on('SIGINT', () => {
